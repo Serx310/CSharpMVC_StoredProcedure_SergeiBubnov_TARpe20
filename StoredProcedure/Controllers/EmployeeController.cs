@@ -30,7 +30,7 @@ namespace StoredProcedure.Controllers
 
         public IEnumerable<Employee> SearchResult() {
             var result = _context.Employee
-                .FromSqlRaw<Employee>("dbo.SearchEmployees")
+                .FromSqlRaw<Employee>("SearchEmployees")
                 .ToList();
 
             return result;
@@ -59,7 +59,58 @@ namespace StoredProcedure.Controllers
                 }
                 return View(model);
             }
+
             
         }
-    }
+        /// <summary>
+        /// SearchPageWithoutDynamicSQL
+        /// </summary>
+        /// <returns></returns>
+        [HttpPost]
+        public IActionResult DynamicSQL(string firstName, string lastName, string gender, int salary)
+        {
+            string connectionStr = _config.GetConnectionString("DefaultConnection");
+
+            using (SqlConnection con = new SqlConnection(connectionStr))
+            {
+                SqlCommand cmd = new SqlCommand();
+                cmd.Connection = con;
+                cmd.CommandText = "SearchEmployees";
+                cmd.CommandType = System.Data.CommandType.StoredProcedure;
+                if (firstName != null)
+                {
+                    SqlParameter param_fn = new SqlParameter("@FirstName", firstName);
+                    cmd.Parameters.Add(param_fn);
+                }
+                if (lastName != null)
+                {
+                    SqlParameter param_ln = new SqlParameter("@LastName", lastName);
+                    cmd.Parameters.Add(param_ln);
+                }
+                if (gender != null)
+                {
+                    SqlParameter param_g = new SqlParameter("@Gender", gender);
+                    cmd.Parameters.Add(param_g);
+                }
+                if (salary != 0)
+                {
+                    SqlParameter param_s = new SqlParameter("@Salary", salary);
+                    cmd.Parameters.Add(param_s);
+                }
+                con.Open();
+                SqlDataReader sdr = cmd.ExecuteReader();
+                List<Employee> model = new List<Employee>();
+                while (sdr.Read())
+                {
+                    var details = new Employee();
+                    details.FirstName = sdr["FirstName"].ToString();
+                    details.LastName = sdr["LastName"].ToString();
+                    details.Gender = sdr["Gender"].ToString();
+                    details.Salary = Convert.ToInt32(sdr["Salary"]);
+                    model.Add(details);
+                }
+                return View(model);
+            }
+        }
+        }
 }
